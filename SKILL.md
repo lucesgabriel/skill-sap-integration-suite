@@ -205,6 +205,21 @@ def Message processData(Message message) {
 
 See [scripting.md](references/scripting.md) for comprehensive patterns.
 
+### Production-Ready Script Library
+
+The `scripts/` folder contains **6 ready-to-use Groovy scripts**. When the user needs one of these capabilities, reference the script directly and provide copy-paste instructions:
+
+| Script | When to Use |
+|---|---|
+| `groovy-script-template.groovy` | Starting point for any new Groovy script |
+| `error-handler.groovy` | Exception Subprocess — captures error details, classifies severity, logs to MPL, outputs JSON for alerting |
+| `csv-to-xml-converter.groovy` | SFTP/file scenarios — streaming CSV-to-XML with quoted field support |
+| `json-to-xml-converter.groovy` | REST-to-SAP — converts JSON to RFC/BAPI XML, IDoc XML, or generic XML with SAP namespaces |
+| `dynamic-routing.groovy` | Multi-endpoint routing — routes to different receivers based on message content, headers, or lookup rules |
+| `xml-validator.groovy` | Inbound validation — validates XML against XSD with strict/lenient modes and line-number error reporting |
+
+**Usage protocol for scripts:** When the user needs a transformation, validation, routing, or error handling script, check the script library FIRST. If a matching script exists, provide it with the required Content Modifier properties configuration. Only write custom scripts when no library script fits the requirement.
+
 ### Adapter Selection
 
 | Need | Adapter |

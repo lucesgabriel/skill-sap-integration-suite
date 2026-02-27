@@ -34,10 +34,15 @@ skill-sap-integration-suite/
 │   ├── excalidraw-diagrams.md        # Visual iFlow diagram patterns (319 lines)
 │   └── simulation-testing.md         # Design-time iFlow testing (280 lines)
 └── scripts/
-    └── groovy-script-template.groovy # Reusable Groovy template
+    ├── groovy-script-template.groovy  # Base template for new scripts (46 lines)
+    ├── error-handler.groovy           # Exception Subprocess handler (168 lines)
+    ├── csv-to-xml-converter.groovy    # Streaming CSV to XML (202 lines)
+    ├── json-to-xml-converter.groovy   # JSON to XML with SAP namespaces (299 lines)
+    ├── dynamic-routing.groovy         # Dynamic endpoint routing (193 lines)
+    └── xml-validator.groovy           # XSD schema validation (169 lines)
 ```
 
-**Total: ~12,300 lines of expert knowledge across 19 files.**
+**Total: ~13,400 lines of expert knowledge across 24 files (17 references + 6 scripts + SKILL.md).**
 
 ## Capabilities
 
@@ -46,7 +51,7 @@ skill-sap-integration-suite/
 | **iFlow Design** | Design integration flows with proper patterns (sync, async, pub-sub, EOIO), error handling, and idempotent processing |
 | **Visual Diagrams** | Generate Excalidraw architecture diagrams with SAP color coding before implementation |
 | **80+ Adapters** | Configure HTTP, SFTP, OData, RFC, IDoc, AMQP, Kafka, JDBC, AS2, SOAP, and 70+ more |
-| **Groovy Scripting** | Write production-ready scripts with proper error handling, streaming, and performance patterns |
+| **Groovy Scripting** | Write production-ready scripts + **6 ready-to-use scripts** (CSV converter, JSON-to-XML/RFC/IDoc, dynamic routing, XSD validator, error handler) |
 | **API Management** | Design API proxies with policies (quota, spike arrest, OAuth, caching), Developer Portal setup |
 | **Event Mesh** | Implement event-driven architectures with CloudEvents, topics, queues, dead-letter handling |
 | **B2B/EDI** | Configure EDIFACT, X12, IDoc type systems with Integration Advisor and Trading Partner Management |
@@ -220,6 +225,39 @@ This skill works best when combined with these MCP (Model Context Protocol) tool
 | **NotebookLM MCP** | Deep-reading queries against SAP Integration Suite books (2,800+ pages) |
 
 The reference files automatically instruct Claude to use these tools when available.
+
+## Production-Ready Script Library
+
+The `scripts/` folder contains **6 Groovy scripts** ready to copy-paste into any iFlow. Each script is fully documented, configurable via Exchange Properties (no hardcoded values), and follows CPI best practices.
+
+### Scripts Overview
+
+| Script | What It Does | Configuration (Exchange Properties) |
+|---|---|---|
+| **`groovy-script-template.groovy`** | Base template for creating new scripts. Includes error handling, MPL logging, and property access boilerplate. | None — starting point |
+| **`error-handler.groovy`** | Captures exception details in Exception Subprocess. Classifies severity (LOW → CRITICAL), extracts HTTP codes, logs structured error report to MPL, and outputs JSON for alert webhooks. | *(auto-reads `CamelExceptionCaught`)* |
+| **`csv-to-xml-converter.groovy`** | Converts CSV/flat files to well-formed XML using streaming (BufferedReader). Handles quoted fields, configurable delimiters, encoding, max rows. | `csvDelimiter`, `csvHasHeader`, `csvRootElement`, `csvRowElement`, `csvEncoding` |
+| **`json-to-xml-converter.groovy`** | Converts JSON to XML with 3 modes: **generic** (standard), **rfc** (SAP BAPI with `urn:sap-com:document:sap:rfc:functions` namespace), **idoc** (IDoc with control/data records). | `j2xMode`, `j2xRfcName`, `j2xIdocType`, `j2xRootElement`, `j2xNamespace` |
+| **`dynamic-routing.groovy`** | Routes messages to different endpoints based on content, headers, or properties. Supports JSON rules, wildcard/prefix matching, and fallback defaults. | `routingField`, `routingSource`, `routingRules`, `routingDefault` |
+| **`xml-validator.groovy`** | Validates XML against XSD schemas uploaded as iFlow resources. Strict mode throws on first error; lenient mode collects all errors and continues. | `xsdSchemaName`, `xsdValidateMode`, `xsdMaxErrors` |
+
+### Common Script Patterns
+
+**CSV file from SFTP → XML → SAP:**
+```
+[SFTP Sender] → [csv-to-xml-converter] → [XSLT Mapping] → [RFC/IDoc Receiver]
+Exception: [error-handler] → [HTTP: alert webhook]
+```
+
+**REST API → SAP BAPI via RFC:**
+```
+[HTTPS Sender] → [xml-validator] → [json-to-xml-converter (mode: rfc)] → [RFC Receiver]
+```
+
+**Multi-target routing by message type:**
+```
+[HTTP Sender] → [dynamic-routing] → HTTP Receiver (${property.targetEndpoint})
+```
 
 ## Topics Covered
 

@@ -619,6 +619,75 @@ function processData(message) {
 
 ---
 
+## Production-Ready Script Library
+
+This skill includes **6 ready-to-use Groovy scripts** in the `scripts/` folder. Each script is fully documented, configurable via Exchange Properties, and follows CPI best practices (streaming, error handling, MPL logging).
+
+### Script Catalog
+
+| Script | Purpose | Lines | Key Features |
+|---|---|---|---|
+| **[groovy-script-template.groovy](../scripts/groovy-script-template.groovy)** | Base template for new scripts | 46 | Error handling, MPL logging, property access |
+| **[error-handler.groovy](../scripts/error-handler.groovy)** | Exception Subprocess handler | 168 | Error classification (LOW/MEDIUM/HIGH/CRITICAL), HTTP code extraction, structured error report, JSON output for alerting |
+| **[csv-to-xml-converter.groovy](../scripts/csv-to-xml-converter.groovy)** | CSV/flat file to XML | 202 | Streaming (BufferedReader), quoted field parsing, configurable delimiter/encoding/max rows, XML name sanitization |
+| **[json-to-xml-converter.groovy](../scripts/json-to-xml-converter.groovy)** | JSON to XML with SAP namespaces | 299 | 3 modes: generic, RFC/BAPI (with `urn:sap-com:document:sap:rfc:functions`), IDoc (with control/data records) |
+| **[dynamic-routing.groovy](../scripts/dynamic-routing.groovy)** | Dynamic endpoint routing | 193 | JSON/XML/header/property routing, wildcard and prefix matching, externalized rules, fallback defaults |
+| **[xml-validator.groovy](../scripts/xml-validator.groovy)** | XSD schema validation | 169 | Strict/lenient modes, line-number error reporting, max error limit, optional payload logging |
+
+### How to Use These Scripts
+
+**Step 1 — Configure properties** in a Content Modifier BEFORE the script step:
+
+| Script | Required Properties | Example Value |
+|---|---|---|
+| csv-to-xml-converter | `csvDelimiter`, `csvHasHeader`, `csvRootElement` | `,`, `true`, `Orders` |
+| json-to-xml-converter | `j2xMode`, `j2xRfcName` (for RFC mode) | `rfc`, `BAPI_SALESORDER_CREATEFROMDAT2` |
+| dynamic-routing | `routingField`, `routingRules` | `orderType`, `{"rules":[{"value":"ZOR","endpoint":"https://...","method":"POST"}]}` |
+| xml-validator | `xsdSchemaName`, `xsdValidateMode` | `PurchaseOrder.xsd`, `strict` |
+| error-handler | *(none — reads CamelExceptionCaught)* | Place as first step in Exception Subprocess |
+
+**Step 2 — Add the script** to your iFlow:
+1. Open iFlow in Web UI → Edit mode
+2. Add a **Script** step (Groovy)
+3. Copy-paste the script content
+4. Connect it in the correct position (see "Where to use" in each script header)
+
+**Step 3 — Read output properties** in subsequent steps:
+
+| Script | Output Properties |
+|---|---|
+| csv-to-xml-converter | `csvRowCount`, `csvColumnCount` |
+| json-to-xml-converter | `j2xElementCount` |
+| dynamic-routing | `targetEndpoint`, `targetMethod`, `routingResolved` |
+| xml-validator | `xmlIsValid`, `xmlErrorCount`, `xmlErrors` |
+| error-handler | `ErrorSeverity`, `ErrorMessage`, `ErrorHttpCode`, `ErrorTimestamp`, `ErroriFlowName` |
+
+### Script Architecture Patterns
+
+**Pattern: CSV file polling → XML → SAP S/4HANA**
+```
+[SFTP Sender] → [csv-to-xml-converter] → [XSLT Mapping] → [RFC Receiver]
+```
+
+**Pattern: Multi-endpoint routing by order type**
+```
+[HTTP Sender] → [Content Modifier: set routingRules] → [dynamic-routing] →
+  HTTP Receiver (Address: ${property.targetEndpoint}, Method: ${property.targetMethod})
+```
+
+**Pattern: Validate → Transform → Send with error handling**
+```
+[HTTPS Sender] → [xml-validator] → [json-to-xml-converter (mode: rfc)] → [RFC Receiver]
+Exception Subprocess: [error-handler] → [Content Modifier: alert body] → [HTTP: Slack webhook]
+```
+
+**Pattern: JSON REST → IDoc via RFC**
+```
+[HTTPS Sender] → [json-to-xml-converter (mode: idoc)] → [IDoc Receiver Adapter]
+```
+
+---
+
 **Next Steps:**
 - See [cloud-integration.md](cloud-integration.md) for when to use scripts vs standard steps in iFlows
 - See [message-mapping-xslt.md](message-mapping-xslt.md) for mapping alternatives (Message Mapping, XSLT)
